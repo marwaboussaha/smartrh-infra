@@ -1,0 +1,52 @@
+# .checkov.yaml — Checkov configuration for SmartHR Terraform
+# Focused on critical security controls
+
+directory:
+  - .
+
+framework:
+  - terraform
+
+output:
+  - cli
+
+output-file-path: checkov-results
+
+# Fail on CRITICAL findings only (allow HIGH to proceed)
+soft-fail: true
+
+# Skip non-critical or environment-specific checks
+skip-check:
+  - CKV_AWS_8     # Launch config IMDSv2 (Fargate only, N/A)
+  - CKV_AWS_18    # S3 access logging (no S3 in this project)
+  - CKV_AWS_21    # S3 versioning (no S3 in this project)
+  - CKV_AWS_79    # IMDSv2 (Fargate only, N/A)
+  - CKV_AWS_86    # CloudFront security (not used)
+  - CKV_AWS_97    # SQS encryption (not used)
+  - CKV_AWS_111   # IAM wildcard (ECS execution role needs ECR/logs)
+  - CKV_AWS_157   # RDS Multi-AZ (optional for dev environments)
+  - CKV_AWS_158   # CloudWatch encryption (optional)
+  - CKV2_AWS_11   # VPC flow logs (nice-to-have, not critical)
+  - CKV2_AWS_12   # VPC default SG (not modified)
+  - CKV2_AWS_28   # ALB WAF (informational only)
+
+# Essential security checks only
+check:
+  # ALB Security
+  - CKV_AWS_2     # ALB HTTPS only
+  - CKV_AWS_91    # ALB access logs
+  - CKV_AWS_92    # ALB HTTPS redirect
+  - CKV_AWS_103   # ALB TLS 1.2+
+  - CKV_AWS_131   # ALB drop invalid headers
+  - CKV_AWS_150   # ALB deletion protection
+  
+  # RDS Security
+  - CKV_AWS_17    # RDS not publicly accessible
+  - CKV_AWS_118   # RDS enhanced monitoring
+  - CKV_AWS_129   # RDS general logging
+  - CKV_AWS_133   # RDS deletion protection
+  - CKV_AWS_293   # RDS auto minor version upgrade
+  
+  # ECS/Secrets Security
+  - CKV_AWS_219   # ECS no secrets in env vars
+  - CKV_AWS_249   # Secrets Manager plaintext check

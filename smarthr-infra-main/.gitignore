@@ -1,0 +1,32 @@
+# Local terraform state — never commit
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.backup
+*.tfstate
+*.tfstate.*
+
+# Sensitive variable files — never commit
+*.tfvars.local
+secrets.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+##
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Checkov output
+checkov-results/
+checkov-report.xml
+terraform.tfvars
+*.tfvars
+##
+
