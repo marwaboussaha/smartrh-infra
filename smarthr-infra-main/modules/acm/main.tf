@@ -2,8 +2,8 @@
 # SmartHR — ACM Certificate module
 #
 # Creates:
-#   - TLS certificate for smarthr.anesbhd.com (+ wildcard *.anesbhd.com)
-#   - DNS validation records in Route 53 automatically
+#   - TLS certificate for smarthr.com (+ wildcard *.anesbhd.com)
+#   - DNS validation records in Rout  53 automatically
 #   - Waits for certificate to be ISSUED before returning
 #
 # This replaces the manually created certificate — import it or let

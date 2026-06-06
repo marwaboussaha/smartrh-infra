@@ -7,7 +7,7 @@ terraform {
     }
   }
   backend "s3" {
-    bucket         = "smarthr-terraform-state"
+    bucket         = "smarthr-terraform-state-smarther-s3"
     key            = "smarthr/terraform.tfstate"
     region         = "us-east-1"
     encrypt        = true
@@ -33,22 +33,6 @@ module "vpc" {
   vpc_cidr    = var.vpc_cidr
 }
 
-module "secrets" {
-  source      = "./modules/secrets"
-  project     = var.project
-  db_host     = module.rds.db_instance_address
-  app_key     = var.app_key
-  db_password = var.db_password
-
-  # Agent secrets
-  agent_token        = var.agent_token
-  backend_token      = var.backend_token
-  openrouter_api_key = var.openrouter_api_key
-  openrouter_model   = var.openrouter_model
-
-  depends_on = [module.rds]
-}
-
 module "rds" {
   source             = "./modules/rds"
   project            = var.project
@@ -57,18 +41,29 @@ module "rds" {
   private_subnet_ids = module.vpc.private_subnet_ids
   db_password        = var.db_password
   app_sg_id          = ""
-
-  depends_on = [module.vpc]
+  depends_on         = [module.vpc]
 }
 
-resource "aws_security_group_rule" "rds_ingress_from_ecs" {
-  type                     = "ingress"
-  from_port                = 3306
-  to_port                  = 3306
-  protocol                 = "tcp"
-  source_security_group_id = module.ecs.app_sg_id
-  security_group_id        = module.rds.security_group_id
-  description              = "MySQL from ECS app tasks"
+module "secrets" {
+  source      = "./modules/secrets"
+  project     = var.project
+  db_host     = module.rds.db_instance_address
+  app_key     = var.app_key
+  db_password = var.db_password
+  agent_token        = var.agent_token
+  backend_token      = var.backend_token
+  openrouter_api_key = var.openrouter_api_key
+  openrouter_model   = var.openrouter_model
+  depends_on         = [module.rds]
+}
+
+# ALB : Appelé SANS certificate_arn
+module "alb" {
+  source            = "./modules/alb"
+  project           = var.project
+  environment       = var.environment
+  vpc_id            = module.vpc.vpc_id
+  public_subnet_ids = module.vpc.public_subnet_ids
 }
 
 module "ecs" {
@@ -88,46 +83,20 @@ module "ecs" {
   web_image              = var.web_image
   redis_image            = var.redis_image
   agent_image            = var.agent_image
-
-  # Agent secret ARNs
   agent_token_secret_arn        = module.secrets.agent_token_arn
   backend_token_secret_arn      = module.secrets.backend_token_arn
   openrouter_api_key_secret_arn = module.secrets.openrouter_api_key_arn
   openrouter_model_secret_arn   = module.secrets.openrouter_model_arn
-
-  depends_on = [module.alb, module.secrets]
+  depends_on                    = [module.alb, module.secrets]
 }
 
-resource "aws_route53_zone" "main" {
-  name = "anesbhd.com"
-}
-
-module "dns" {
-  source        = "./modules/dns"
-  zone_id       = aws_route53_zone.main.zone_id
-  app_subdomain = var.app_domain
-  alb_dns_name  = module.alb.alb_dns_name
-  alb_zone_id   = module.alb.alb_zone_id
-
-  depends_on = [module.alb]
-}
-
-module "acm" {
-  source        = "./modules/acm"
-  project       = var.project
-  root_domain   = "anesbhd.com"
-  app_subdomain = var.app_domain
-  zone_id       = aws_route53_zone.main.zone_id
-}
-module "alb" {
-  source            = "./modules/alb"
-  project           = var.project
-  environment       = var.environment
-  vpc_id            = module.vpc.vpc_id
-  public_subnet_ids = module.vpc.public_subnet_ids
-  certificate_arn   = module.acm.certificate_arn
-
-  depends_on = [module.acm]
+resource "aws_security_group_rule" "rds_ingress_from_ecs" {
+  type                     = "ingress"
+  from_port                = 3306
+  to_port                  = 3306
+  protocol                 = "tcp"
+  source_security_group_id = module.ecs.app_sg_id
+  security_group_id        = module.rds.security_group_id
 }
 
 module "ecr" {
